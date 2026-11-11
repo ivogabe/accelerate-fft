@@ -28,7 +28,6 @@ import Data.Array.Accelerate.Math.FFT.Mode
 import Data.Array.Accelerate.Math.FFT.Type
 
 import Data.Array.Accelerate.AST.Operation
-import Data.Array.Accelerate.Error
 import Data.Array.Accelerate.Representation.Array
 import Data.Array.Accelerate.Representation.Shape
 import Data.Array.Accelerate.Representation.Type
@@ -69,7 +68,7 @@ mkForeignFft mode shr eR kernel =
     -- Types of input and output arrays
     shr (TupRsingle tp) (TupRsingle tp)
     -- Operation we want to call
-    NotFusible $ NForeign name True kernel
+    NotFusible $ NForeign name True kernelMem kernel
   where
     name = "fft_dim" ++ show (rank shr) ++ "_" ++ nameNum
     nameNum = case eR of
@@ -80,6 +79,10 @@ mkForeignFft mode shr eR kernel =
     tp = VectorScalarType $ VectorType 2 $ case eR of
       NumericRfloat32 -> singleType
       NumericRfloat64 -> singleType
+    
+    -- Size of kernel memory. In kernel memory, we store a fftw_plan.
+    -- This is an opaque pointer, thus 8 bytes on 64-bit systems
+    kernelMem = 8
 
 type Kernel sh e = ForeignAfun (Var' Int -> In sh (Vec2 e) -> Out sh (Vec2 e) -> ())
 foreign import ccall unsafe "&accelerate_fft_dim1_double" kernelDim1Double :: Kernel DIM1 Double

@@ -75,6 +75,12 @@ library
         fftw3f >=3.3 && <4
       , fftw3 >=3.3 && <4
 
+    -- fftw threads libraries are not available via pkgconfig
+    -- https://github.com/FFTW/fftw3/issues/180
+    extra-libraries:
+        fftw3_threads
+      , fftw3f_threads
+
     c-sources:
       cbits/native.c
 
