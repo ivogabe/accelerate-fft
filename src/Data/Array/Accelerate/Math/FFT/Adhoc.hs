@@ -26,7 +26,6 @@ module Data.Array.Accelerate.Math.FFT.Adhoc ( fft )
 import Data.Array.Accelerate                                        hiding ( transpose, fromInteger )
 import Data.Array.Accelerate.Data.Bits
 import Data.Array.Accelerate.Data.Complex
-import Data.Array.Accelerate.Control.Lens.Shape
 
 import Data.Array.Accelerate.Math.FFT.Mode
 import Data.Array.Accelerate.Math.FFT.Type
@@ -112,16 +111,16 @@ ditSplitRadixLoop mode arr =
 
       rebase s = lift (transform2 (-1) (afst s), asnd s)
 
-      reorder (unlift -> (xs,ys)) =
+      reorder (T2 xs ys) =
         let evens = sieve 2 0 xs
             odds  = sieve 2 1 xs
         in
         lift (evens ++^ ys, twist 2 odds)
 
       initial =
-        let sh :. n = unlift (shape arr) :: Exp sh :. Exp Int
-        in  lift ( reshape (lift (sh :. 1 :. n)) arr
-                 , fill    (lift (sh :. 0 :. n `quot` 2)) 0
+        let sh ::. n = shape arr
+        in  lift ( reshape (sh ::. 1 ::. n) arr
+                 , fill    (sh ::. 0 ::. n `quot` 2) 0
                  )
   in
   headV
@@ -352,18 +351,20 @@ consV x xs =
 headV :: (Shape sh, Elt e)
       => Acc (Array (sh:.Int:.Int) e)
       -> Acc (Array (sh:.Int) e)
-headV xs = slice xs (lift (Any :. (0 :: Exp Int) :. All))
+headV xs = slice xs (Any_ ::. (0 :: Exp Int) ::. All_)
 
 tailV :: forall sh e. (Shape sh, Elt e)
       => Acc (Array (sh:.Int:.Int) e)
       -> Acc (Array (sh:.Int:.Int) e)
-tailV = tailOn _2
+tailV = dropV 1
 
 dropV :: forall sh e. (Shape sh, Elt e)
       => Exp Int
       -> Acc (Array (sh:.Int:.Int) e)
       -> Acc (Array (sh:.Int:.Int) e)
-dropV = dropOn _2
+dropV n xs = backpermute (sh ::. max 0 (sz2 - n) ::. sz1) (\(ix ::. i2 ::. i1) -> ix ::. i2 + n ::. i1) xs
+  where
+    sh ::. sz2 ::. sz1 = shape xs
 
 sieve
     :: forall sh e. (Shape sh, Elt e)
@@ -411,7 +412,15 @@ infixr 5 ++^
       => Acc (Array (sh:.Int:.Int) e)
       -> Acc (Array (sh:.Int:.Int) e)
       -> Acc (Array (sh:.Int:.Int) e)
-(++^) = concatOn _2
+(++^) xs ys = generate
+    (intersect sh sh' ::. sz2 + sz2' ::. min sz1 sz1')
+    (\(ix ::. i2 ::. i1) ->
+      cond (i2 < sz2)
+      (xs ! (ix ::. i2 ::. i1))
+      (ys ! (ix ::. i2 - sz2 ::. i1)))
+  where
+    sh  ::. sz2  ::. sz1  = shape xs
+    sh' ::. sz2' ::. sz1' = shape ys
 
 zipWithExtrude1
     :: (Shape sh, Slice sh, Elt a, Elt b, Elt c)
@@ -435,7 +444,9 @@ transpose
     :: forall sh e. (Shape sh, Elt e)
     => Acc (Array (sh:.Int:.Int) e)
     -> Acc (Array (sh:.Int:.Int) e)
-transpose = transposeOn _1 _2
+transpose xs = backpermute (sh ::. s1 ::. s2) (\(ix ::. i2 ::. i1) -> ix ::. i1 ::. i2) xs
+  where
+    sh ::. s2 ::. s1 = shape xs
 
 transform2
     :: (Shape sh, Num e)

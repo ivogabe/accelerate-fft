@@ -38,8 +38,8 @@ import Data.Array.Accelerate                                        as A
 import Data.Array.Accelerate.Data.Complex
 import Data.Array.Accelerate.Math.FFT.Type
 import Data.Array.Accelerate.Math.FFT.Mode
-import qualified Data.Array.Accelerate.Sugar.Shape                  as A ( rank, shapeR )
 import qualified Data.Array.Accelerate.Math.FFT.Adhoc               as Adhoc
+import Data.Array.Accelerate.Analysis.Match
 
 #ifdef ACCELERATE_LLVM_NATIVE_BACKEND
 import qualified Data.Array.Accelerate.Math.FFT.LLVM.Native         as Native
@@ -48,41 +48,38 @@ import qualified Data.Array.Accelerate.Math.FFT.LLVM.Native         as Native
 import qualified Data.Array.Accelerate.Math.FFT.LLVM.PTX            as PTX
 #endif
 
-import Prelude                                                      as P
 
 
 -- | Discrete Fourier Transform along the innermost dimension of an array.
---
--- Notes for FFI implementations:
---
---   * fftw supports arrays of dimension 1-5
---   * cuFFT supports arrays of dimension 1-3
---
--- The pure implementation will be used otherwise.
 --
 fft :: forall sh e. (Shape sh, Slice sh, Numeric e)
     => Mode
     -> Acc (Array (sh:.Int) (Complex e))
     -> Acc (Array (sh:.Int) (Complex e))
 fft mode arr
-  = let
-        scale = A.fromIntegral (indexHead (shape arr))
-        rank  = A.rank @(sh:.Int)
-        shR   = A.shapeR @(sh:.Int)
-        eR    = numericR @e
-        go    =
+  -- One-dimensional input
+  | Just Refl <- matchShapeType @sh @Z = fft1D mode arr
+  | otherwise =
+    let
+      sh ::. sz = shape arr
+      -- Reshape to two-dimensional array, by flattening all outer dimensions
+      arr' = reshape (I2 (shapeSize sh) sz) arr
+
+      scale = A.fromIntegral sz
+      eR = numericR @e
+      go =
 #ifdef ACCELERATE_LLVM_NATIVE_BACKEND
-                  (if rank P.<= 5 then foreignAcc (Native.fft mode shR eR) else id) $
+        foreignAcc (Native.fftMany mode eR) $
 #endif
 #ifdef ACCELERATE_LLVM_PTX_BACKEND
-                  (if rank P.<= 3 then foreignAcc (PTX.fft    mode shR eR) else id) $
+        foreignAcc (PTX.fftMany mode eR) $
 #endif
-                  Adhoc.fft mode
+        Adhoc.fft mode
+      output = reshape (sh ::. sz) $ go arr'
     in
     case mode of
-      Inverse -> A.map (/scale) (go arr)
-      _       -> go arr
-
+      Inverse -> A.map (/scale) output
+      _       -> output
 
 -- Vector Transform
 -- ----------------
