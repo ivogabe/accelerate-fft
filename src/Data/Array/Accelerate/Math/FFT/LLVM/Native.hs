@@ -68,7 +68,7 @@ mkForeignFft mode shr eR kernel =
     -- Types of input and output arrays
     shr (TupRsingle tp) (TupRsingle tp)
     -- Operation we want to call
-    NotFusible $ NForeign name True kernelMem kernel
+    NonFusibleR $ NForeign name True kernelMem kernel
   where
     name = "fft_dim" ++ show (rank shr) ++ "_" ++ nameNum
     nameNum = case eR of
