@@ -28,3 +28,21 @@ Please feel free to contact me through GitHub or [gitter.im][gitter.im].
   [GitHub]:       https://github.com/AccelerateHS/accelerate
   [gitter.im]:    https://gitter.im/AccelerateHS/Lobby
 
+## Installation for CPUs
+
+To use accelerate-fft with the CPU (Native) backend, [FFTW](https://www.fftw.org/) must be installed. FFTW must be compiled and installed with support for floats and threads.
+
+After [downloading the sources of FFTW](https://www.fftw.org/download.html), you can compile and install FFTW (on Unix systems) with the following commands:
+```sh
+# Build and install for floats:
+./configure --enable-threads --enable-float
+make
+make install
+# Build and install for doubles:
+./configure --enable-threads
+make
+make install
+```
+FFTW needs to be installed with support for both floats and doubles, and support for threads.
+
+For more information, see the [documentation](https://www.fftw.org/fftw3_doc/) of FFTW.

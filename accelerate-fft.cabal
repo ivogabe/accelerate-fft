@@ -72,8 +72,8 @@ library
       , accelerate-llvm-native  >= 1.3
 
     pkgconfig-depends:
-        fftw3f >=3.3 && <4
-      , fftw3 >=3.3 && <4
+        fftw3f >=3.3.9 && <4
+      , fftw3 >=3.3.9 && <4
 
     -- fftw threads libraries are not available via pkgconfig
     -- https://github.com/FFTW/fftw3/issues/180

@@ -114,14 +114,14 @@ struct CtxDim3Float {
   fftwf_plan plan;
 };
 
-inline uint8_t execute_and_destroy(fftw_plan p) {
+static inline uint8_t execute_and_destroy(fftw_plan p) {
   fftw_execute(p);
   pthread_mutex_lock(&planner_lock);
   fftw_destroy_plan(p);
   pthread_mutex_unlock(&planner_lock);
   return 0;
 }
-inline uint8_t execute_and_destroy_float(fftwf_plan p) {
+static inline uint8_t execute_and_destroy_float(fftwf_plan p) {
   fftwf_execute(p);
   pthread_mutex_lock(&planner_lock);
   fftwf_destroy_plan(p);

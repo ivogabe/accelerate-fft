@@ -16,8 +16,9 @@ module Test.ShowType
   where
 
 import Data.Complex
+import Data.Kind
 
-data ArgType (a :: *) = AT
+data ArgType (a :: Type) = AT
 
 showType :: forall proxy a. Show (ArgType a) => proxy a -> String
 showType _ = show (AT :: ArgType a)
